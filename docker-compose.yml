@@ -1,0 +1,13 @@
+version: "3.7"
+
+services:
+  teapot_fortune:
+    image: "logoilab/teapot_fortune"
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "6757:6757"
+    environment:
+      - DATABASE_URL=data/copypastas.sqlite
+      - TEAPOT_FORTUNE_PORT=6757
