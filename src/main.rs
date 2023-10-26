@@ -72,6 +72,13 @@ async fn main() -> std::io::Result<()> {
         }
     };
 
+    if !Path::new(&database_path).exists() {
+        eprintln!(
+            "Database file \"{database_path}\" does not exist. Please create it and try again."
+        );
+        std::process::exit(1);
+    }
+
     let raw_port = match std::env::var("TEAPOT_FORTUNE_PORT") {
         Ok(port) => port,
         Err(e) => {
@@ -91,13 +98,6 @@ async fn main() -> std::io::Result<()> {
             6757
         }
     };
-
-    if !Path::new(&database_path).exists() {
-        eprintln!(
-            "Database file \"{database_path}\" does not exist. Please create it and try again."
-        );
-        std::process::exit(1);
-    }
 
     let conn = connect(database_path)
         .await
