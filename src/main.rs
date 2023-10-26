@@ -26,7 +26,7 @@ async fn connect(filename: impl AsRef<Path>) -> Result<SqlitePool, Error> {
 async fn default(data: web::Data<AppState>) -> HttpResponse {
     let mut rng = rand::thread_rng();
     //let num: i64 = rng.gen_range(0..389137);
-    let num: i64 = rng.gen_range(0..9000);
+    let num: i64 = rng.gen_range(0..53000);
     let copypasta: CopyPasta = sqlx::query_as!(
         CopyPasta,
         r#"SELECT * FROM copypastas WHERE id = ?"#,
