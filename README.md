@@ -1,6 +1,6 @@
 # TeapotFortune
 
-A teapot server that responds with 418 and a copypasta scraped from copypastadb.com
+A teapot server that responds with HTTP 418 *(I Am A Teapot)* and a copypasta scraped from copypastadb.com
 
 This pairs well with bot blocking on NGiNX.
 
