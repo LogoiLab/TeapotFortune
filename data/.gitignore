@@ -1,0 +1,4 @@
+./sitemaps/post*
+copypastas.sqlite
+copypastas.sqlite-journal
+copypasta_urls.lst
