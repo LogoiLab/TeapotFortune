@@ -43,11 +43,11 @@ async fn default(data: web::Data<AppState>) -> HttpResponse {
         }
         Err(e) => {
             eprintln!("Failed to fetch copypasta: {e:?}");
+
+            const ERROR_BODY: &'static str = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"></head><body>There was an error. Please try again later.</body></html>";
             HttpResponse::build(StatusCode::from_u16(500).unwrap()) // Safety: valid status code
                 .content_type("text/html")
-                .body(format!(
-                    "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"></head><body>There was an error. Please try again later.</body></html>",
-                ))
+                .body(ERROR_BODY)
         }
     }
 }
