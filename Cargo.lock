@@ -1714,6 +1714,7 @@ dependencies = [
  "actix-web",
  "dotenv",
  "htmlescape",
+ "rand",
  "sqlx",
 ]
 

@@ -3,6 +3,7 @@ use actix_web::{get, middleware, web, App, HttpResponse, HttpServer};
 use dotenv::dotenv;
 use sqlx::{sqlite::SqliteConnectOptions, Error, SqlitePool};
 use std::path::Path;
+use rand::Rng;
 
 #[allow(dead_code)]
 struct CopyPasta {
@@ -22,50 +23,46 @@ async fn connect(filename: impl AsRef<Path>) -> Result<SqlitePool, Error> {
     SqlitePool::connect_with(options).await
 }
 
-#[get("/{tail:.*}")]
-async fn default(data: web::Data<AppState>) -> HttpResponse {
+async fn gen_copypasta(data: &web::Data<AppState>) -> Option<CopyPasta> {
+    let mut rng = rand::thread_rng();
+    let num: i64 = rng.gen_range(0..388799);
     match sqlx::query_as!(
         CopyPasta,
-        r#"SELECT * FROM copypastas 
-        ORDER BY RANDOM()
-        LIMIT 1"#
+        r#"SELECT * FROM copypastas WHERE id = ?"#,
+        num
     )
     .fetch_one(&data.db)
-    .await
-    {
-        Ok(copypasta) => {
-            HttpResponse::build(StatusCode::from_u16(418).unwrap()) // Safety: valid status code
-                .content_type("text/html")
-                .body(format!(
-                "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"></head><body>{}</body></html>",
-                copypasta.body
-            ))
-        }
-        Err(e) => {
-            eprintln!("Failed to fetch copypasta: {e:?}");
-
-            const ERROR_BODY: &'static str = "<!DOCTYPE html><html><head><meta charset=\"UTF-8\"></head><body>There was an error. Please try again later.</body></html>";
-            HttpResponse::build(StatusCode::from_u16(500).unwrap()) // Safety: valid status code
-                .content_type("text/html")
-                .body(ERROR_BODY)
-        }
+    .await {
+        Ok(o) => Some(o),
+        Err(_) => None
     }
+}
+
+#[get("/{tail:.*}")]
+async fn default(data: web::Data<AppState>) -> HttpResponse {
+    let mut copypasta: Option<CopyPasta> = gen_copypasta(&data).await;
+    while copypasta.is_none() {
+        copypasta = gen_copypasta(&data).await;
+    }
+        HttpResponse::build(StatusCode::from_u16(418).unwrap()) // Safety: valid status code
+        .content_type("text/html")
+        .body(format!("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"></head><body>{}</body></html>", copypasta.unwrap().body)) // Safety: while loop blocks None type, safe to unwrap.
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     match dotenv() {
         Ok(_) => (),
-        Err(e) => {
-            eprintln!("Failed to load .env file: {e:?}. This may not be fatal. Continuing");
+        Err(_) => {
+            eprintln!("No env file found, continuing.");
         }
     }
 
     let database_path = match std::env::var("DATABASE_URL") {
         Ok(url) => url,
-        Err(e) => {
+        Err(_) => {
             println!(
-                "DATABASE_URL env variable not set, using default \"./data/copypastas.sqlite\". (error: {e:?})"
+                "DATABASE_URL env variable not set, using default \"./data/copypastas.sqlite\"."
             );
             std::env::set_var("DATABASE_URL", "./data/copypastas.sqlite");
             "./data/copypastas.sqlite".to_string()
@@ -81,9 +78,9 @@ async fn main() -> std::io::Result<()> {
 
     let raw_port = match std::env::var("TEAPOT_FORTUNE_PORT") {
         Ok(port) => port,
-        Err(e) => {
+        Err(_) => {
             println!(
-                "TEAPOT_FORTUNE_PORT env variable not set, using default of 6757. (error: {e:?})"
+                "TEAPOT_FORTUNE_PORT env variable not set, using default of 6757."
             );
             std::env::set_var("PORT", "6757");
             "6757".to_string()
@@ -92,8 +89,8 @@ async fn main() -> std::io::Result<()> {
 
     let port = match raw_port.parse::<u16>() {
         Ok(port) => port,
-        Err(e) => {
-            eprintln!("TEAPOT_FORTUNE_PORT \"{raw_port}\" is not a valid port number. Using default of 6757 (error: {e:?})");
+        Err(_) => {
+            eprintln!("TEAPOT_FORTUNE_PORT \"{raw_port}\" is not a valid port number. Using default of 6757");
             std::env::set_var("PORT", "6757");
             6757
         }
