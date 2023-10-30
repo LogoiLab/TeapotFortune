@@ -11,6 +11,10 @@ struct CopyPasta {
     body: String,
 }
 
+struct MaxId {
+    id: Option<i32>
+}
+
 struct AppState {
     db: SqlitePool,
 }
@@ -23,9 +27,21 @@ async fn connect(filename: impl AsRef<Path>) -> Result<SqlitePool, Error> {
     SqlitePool::connect_with(options).await
 }
 
+async fn get_db_size(data: &web::Data<AppState>) -> i64 {
+    match sqlx::query_as!(
+        MaxId,
+        r#"SELECT max(id) AS id FROM copypastas;"#,
+    )
+    .fetch_one(&data.db)
+    .await {
+        Ok(o) => o.id.unwrap_or(388800) as i64,
+        Err(_) => 388800,
+    }
+}
+
 async fn gen_copypasta(data: &web::Data<AppState>) -> Option<CopyPasta> {
     let mut rng = rand::thread_rng();
-    let num: i64 = rng.gen_range(0..388799);
+    let num: i64 = rng.gen_range(0..get_db_size(&data).await);
     match sqlx::query_as!(
         CopyPasta,
         r#"SELECT * FROM copypastas WHERE id = ?"#,
