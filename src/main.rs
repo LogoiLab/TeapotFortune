@@ -130,6 +130,7 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .app_data(web::Data::new(AppState { db: conn.clone(), res_code: response_code}))
             .wrap(middleware::Compress::default())
+            .wrap(middleware::DefaultHeaders::new().add(("CDN-Cache-Control", "no-cache")))
             .service(default)
     })
     .bind(("0.0.0.0", port))?
