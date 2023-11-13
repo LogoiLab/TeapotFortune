@@ -8,7 +8,7 @@ use rand::Rng;
 #[allow(dead_code)]
 struct CopyPasta {
     id: i64,
-    body: String,
+    body: String
 }
 
 struct MaxId {
@@ -17,6 +17,7 @@ struct MaxId {
 
 struct AppState {
     db: SqlitePool,
+    res_code: u16
 }
 
 async fn connect(filename: impl AsRef<Path>) -> Result<SqlitePool, Error> {
@@ -60,7 +61,7 @@ async fn default(data: web::Data<AppState>) -> HttpResponse {
     while copypasta.is_none() {
         copypasta = gen_copypasta(&data).await;
     }
-        HttpResponse::build(StatusCode::from_u16(418).unwrap()) // Safety: valid status code
+        HttpResponse::build(StatusCode::from_u16(data.res_code).unwrap()) // Safety: valid status code
         .content_type("text/html")
         .body(format!("<!DOCTYPE html><html><head><meta charset=\"UTF-8\"></head><body>{}</body></html>", copypasta.unwrap().body)) // Safety: while loop blocks None type, safe to unwrap.
 }
@@ -73,6 +74,15 @@ async fn main() -> std::io::Result<()> {
             eprintln!("No env file found, continuing.");
         }
     }
+
+    let response_code = match std::env::var("RESPONSE_CODE") {
+        Ok(rescode) => rescode.parse::<u16>().unwrap_or(418),
+        Err(_) => {
+            println!("RESPONSE_CODE env variable not set, using default \"418\"");
+            std::env::set_var("RESPONSE_CODE", "418");
+            418
+        }
+    };
 
     let database_path = match std::env::var("DATABASE_URL") {
         Ok(url) => url,
@@ -118,7 +128,7 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         App::new()
-            .app_data(web::Data::new(AppState { db: conn.clone() }))
+            .app_data(web::Data::new(AppState { db: conn.clone(), res_code: response_code}))
             .wrap(middleware::Compress::default())
             .service(default)
     })
